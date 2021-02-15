@@ -52,10 +52,10 @@ public class NGSIToPostgreSQL extends AbstractSessionFactoryProcessor {
             .name("data-model")
             .displayName("Data Model")
             .description("The Data model for creating the tables when an event have been received you can choose between" +
-                    ":db-by-service-path or db-by-entity, default value is db-by-service-path")
+                    ":db-by-service-path or db-by-entity for ngsiv2 and  db-by-entity or db-by-entity-type for ngsi-ld, default value is db-by-entity")
             .required(false)
-            .allowableValues("db-by-service-path", "db-by-entity")
-            .defaultValue("db-by-service-path")
+            .allowableValues("db-by-service-path", "db-by-entity","db-by-entity-type")
+            .defaultValue("db-by-entity")
             .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
             .build();
 
@@ -72,9 +72,9 @@ public class NGSIToPostgreSQL extends AbstractSessionFactoryProcessor {
     protected static final PropertyDescriptor NGSI_VERSION = new PropertyDescriptor.Builder()
             .name("ngsi-version")
             .displayName("NGSI Version")
-            .description("The version of NGSI of your incomming events. You can choose Between v2 for NGSIv2 and ld for NGSI-LD. NGSI-LD is not supported yet ")
+            .description("The version of NGSI of your incomming events. You can choose Between v2 for NGSIv2 and ld for NGSI-LD ")
             .required(false)
-            .allowableValues("v2")
+            .allowableValues("v2","ld")
             .defaultValue("v2")
             .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
             .build();
@@ -216,7 +216,7 @@ public class NGSIToPostgreSQL extends AbstractSessionFactoryProcessor {
 
     private final PartialFunctions.InitConnection<FunctionContext, Connection> initConnection = (c, s, fc, ff) -> {
         final Connection connection = c.getProperty(CONNECTION_POOL).asControllerService(DBCPService.class)
-                .getConnection(ff == null ? Collections.emptyMap() : ff.getAttributes());
+                .getConnection(ff == null ? Collections.emptyMap() : ff.get(0).getAttributes());
         try {
             fc.originalAutoCommit = connection.getAutoCommit();
             connection.setAutoCommit(false);
@@ -244,13 +244,21 @@ public class NGSIToPostgreSQL extends AbstractSessionFactoryProcessor {
             final NGSIEvent event=n.getEventFromFlowFile(flowFile,session,context.getProperty(NGSI_VERSION).getValue());
             final long creationTime = event.getCreationTime();
             final String fiwareService = (event.getFiwareService().compareToIgnoreCase("nd")==0)?context.getProperty(DEFAULT_SERVICE).getValue():event.getFiwareService();
-            final String fiwareServicePath = (event.getFiwareServicePath().compareToIgnoreCase("/nd")==0)?context.getProperty(DEFAULT_SERVICE_PATH).getValue():event.getFiwareServicePath();
+            final String fiwareServicePath = ("ld".equals(context.getProperty(NGSI_VERSION).getValue()))?"":(event.getFiwareServicePath().compareToIgnoreCase("/nd")==0)?context.getProperty(DEFAULT_SERVICE_PATH).getValue():event.getFiwareServicePath();
+            System.out.println(fiwareServicePath);
             try {
                 final String schemaName = postgres.buildSchemaName(fiwareService, context.getProperty(ENABLE_ENCODING).asBoolean(), context.getProperty(ENABLE_LOWERCASE).asBoolean(),context.getProperty(CKAN_COMPATIBILITY).asBoolean());
-                for (Entity entity : event.getEntities()) {
-                    String tableName = postgres.buildTableName(fiwareServicePath, entity, context.getProperty(DATA_MODEL).getValue(), context.getProperty(ENABLE_ENCODING).asBoolean(), context.getProperty(ENABLE_LOWERCASE).asBoolean(),context.getProperty(CKAN_COMPATIBILITY).asBoolean());
-                    final String sql = postgres.insertQuery(entity, creationTime, fiwareServicePath, schemaName, tableName, context.getProperty(ATTR_PERSISTENCE).getValue(),context.getProperty(CKAN_COMPATIBILITY).asBoolean());
+                System.out.println(schemaName);
+                System.out.println();
+                ArrayList<Entity> entities= new ArrayList<>();
+                entities = ("ld".equals(context.getProperty(NGSI_VERSION).getValue()))?event.getEntitiesLD():event.getEntities();
+                System.out.println(entities);
+                for (Entity entity : entities) {
+                    String tableName = postgres.buildTableName(fiwareServicePath, entity, context.getProperty(DATA_MODEL).getValue(), context.getProperty(ENABLE_ENCODING).asBoolean(), context.getProperty(ENABLE_LOWERCASE).asBoolean(),context.getProperty(NGSI_VERSION).getValue(),context.getProperty(CKAN_COMPATIBILITY).asBoolean());
+                    final String sql = postgres.insertQuery(entity, creationTime, fiwareServicePath, schemaName, tableName, context.getProperty(ATTR_PERSISTENCE).getValue(),context.getProperty(NGSI_VERSION).getValue(),context.getProperty(CKAN_COMPATIBILITY).asBoolean());
                     // Get or create the appropriate PreparedStatement to use.
+                    System.out.println(tableName);
+                    System.out.println(sql);
                     final StatementFlowFileEnclosure enclosure = sqlToEnclosure
                             .computeIfAbsent(sql, k -> {
                                 final StatementFlowFileEnclosure newEnclosure = new StatementFlowFileEnclosure(sql);
@@ -264,7 +272,7 @@ public class NGSIToPostgreSQL extends AbstractSessionFactoryProcessor {
                         JdbcCommon.setParameters(stmt, flowFile.getAttributes());
                         try {
                             conn.createStatement().execute(postgres.createSchema(schemaName));
-                            conn.createStatement().execute(postgres.createTable(schemaName, tableName, context.getProperty(ATTR_PERSISTENCE).getValue(), entity,context.getProperty(CKAN_COMPATIBILITY).asBoolean()));
+                            conn.createStatement().execute(postgres.createTable(schemaName, tableName, context.getProperty(ATTR_PERSISTENCE).getValue(), entity,context.getProperty(NGSI_VERSION).getValue(),context.getProperty(CKAN_COMPATIBILITY).asBoolean()));
 
                         } catch (SQLException s) {
                             getLogger().error(s.toString());
