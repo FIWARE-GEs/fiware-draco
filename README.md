@@ -1,6 +1,6 @@
 # FIWARE Draco
 
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/e35fcea6513143e4b2ac3eb28a0932c1)](https://app.codacy.com/app/anmunoz/fiware-draco?utm_source=github.com&utm_medium=referral&utm_content=ging/fiware-draco&utm_campaign=Badge_Grade_Dashboard)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/916af70ef1214f378608142c70ef3ad0)](https://www.codacy.com/gh/ging/fiware-draco/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ging/fiware-draco&amp;utm_campaign=Badge_Grade)
 [![](https://nexus.lab.fiware.org/repository/raw/public/badges/chapters/core.svg)](https://www.fiware.org/developers/catalogue/)
 [![License](https://img.shields.io/github/license/ging/fiware-draco.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
 [![Docker badge](https://img.shields.io/docker/pulls/ging/fiware-draco.svg)](https://hub.docker.com/r/ging/fiware-draco/)[![](https://img.shields.io/badge/tag-fiware--draco-orange.svg?logo=stackoverflow)](https://stackoverflow.com/questions/tagged/fiware)
@@ -84,7 +84,7 @@ The most easy way to deploy Draco is running the container available on DockerHu
 
 Start a container for this image by typing in a terminal:
 
-     $ docker run --name draco -p 8080:8080 -p 5050:5050 -d ging/fiware-draco
+     $ docker run --name draco -p 8443:8443 -p 5050:5050 -d ging/fiware-draco
 
 However if you want to have a custom installation please go to the **Installation and Administration Guide** at
 [readthedocs.org](docs/installation_and_administration_guide/README.md)
@@ -130,7 +130,7 @@ This project is part of FIWARE and has been rated as follows:
 ## Roadmap
 
 The list of features that are planned for the subsequent release are available in the
-[ROADMAP](https://github.com/ging/fiware-draco/blob/develop/docs/roadmap.md) file.
+[ROADMAP](./docs/roadmap.md) file.
 
 ## Maintainers
 
